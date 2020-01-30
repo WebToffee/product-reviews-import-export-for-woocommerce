@@ -9,4 +9,4 @@
 </p>
 
 Welcome to the WebToffee repository on GitHub. Here you can browse the source, look at open issues and keep track of development.
-If you are not a developer, please use the [WebToffee plugin Repo](https://profiles.wordpress.org/webtoffee/#content-plugins/) on WP.org.
+If you are not a developer, please use the [WebToffee plugin Repo](https://profiles.wordpress.org/webtoffee/#content-plugins) on WP.org.
