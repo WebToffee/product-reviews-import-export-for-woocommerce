@@ -1,0 +1,6 @@
+comment_ID,comment_post_ID,comment_author,comment_author_email,comment_date,comment_date_gmt,comment_content,comment_approved,comment_parent,user_id,rating,verified
+37,107,User1,abram_demo@gmail.com,9/6/2016 6:29,9/6/2016 6:29,Ok new,1,0,0,,
+11,48,User2,abram_demo@gmail.com,9/2/2016 6:29,9/2/2016 6:29,Good One test,1,0,2,4,0
+10,54,Ore Mary,abram_demo@gmail.com,8/31/2016 6:13,8/31/2016 6:13,Good,1,0,2,5,1
+6,36,Uesr 3,user3@gmail.com,8/31/2016 6:07,8/31/2016 6:07,review 6,1,0,0,5,0
+2,80,Uesr 1,user1@gmail.com,8/31/2016 6:00,8/31/2016 6:00,Review 1,1,0,0,1,0
