@@ -1,8 +1,8 @@
 # Product-Reviews-Import-Export-for-WooCommerce
-Product Reviews Import Export for WooCommerce
 
 
-<p align="center"><a href="https://www.webtoffee.com/"><img src="https://www.webtoffee.com/wp-content/uploads/2018/10/webtoffee-logo.png" alt="WebToffee"></a></p>
+
+<p align="center"><a href="https://www.webtoffee.com/"><img src="webtoffee.png" alt="WebToffee"></a></p>
 
 <p align="center">
 <a href="https://www.gnu.org/licenses/gpl-3.0.en.html"><img src="wt-gpl-license.svg" alt="license"></a> 
