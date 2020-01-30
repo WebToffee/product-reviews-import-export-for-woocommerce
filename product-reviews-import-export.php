@@ -1,7 +1,7 @@
 <?php
 
 /*
-  Plugin Name: Product Reviews Import Export (Basic)
+  Plugin Name: Product Reviews Import Export
   Plugin URI: https://wordpress.org/plugins/product-reviews-import-export-for-woocommerce/
   Description: Import and Export Products Reviews From and To your WooCommerce Store.
   Author: WebToffee
