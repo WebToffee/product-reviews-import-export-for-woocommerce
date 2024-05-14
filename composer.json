@@ -5,7 +5,6 @@
 	"version": "1.4.9",
 	"type": "wordpress-plugin",
 	"license": "GPL-3.0-or-later",
-	"prefer-stable": true,
 	"require": {
 		"php": ">=7.4"
 	}
