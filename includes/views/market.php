@@ -3,43 +3,45 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 ?>
-<div class="market-box table-box-main">
-    <?php /* <div class="getting-started-video">
-        <h2><?php _e('Watch getting started video', 'wf_pr_rev_import_export');?></h2>
-    <iframe src="https://www.youtube.com/embed/L-01qI1EZWE?rel=0&showinfo=0" frameborder="0" allowfullscreen="allowfullscreen" align="center"></iframe>
-    </div> */ ?>
+<div class="wt-import-export-upsell-wrapper-review market-box table-box-main">
+
     <div class="pipe-review-widget">
         <?php
-        echo sprintf(__('<div class=""><p><i>If you like the plugin please leave us a %1$s review!</i><p></div>', 'wf_pr_rev_import_export'), '<a href="https://wordpress.org/support/plugin/product-reviews-import-export-for-woocommerce/reviews?rate=5#new-post" target="_blank" class="xa-pipe-rating-link" data-reviewed="' . esc_attr__('Thanks for the review.', 'wf_pr_rev_import_export') . '">&#9733;&#9733;&#9733;&#9733;&#9733;</a>');
+        echo sprintf(__('<div class=""><p><i>If you like the plugin please leave us a %1$s review!</i><p></div>', 'product-reviews-import-export-for-woocommerce'), '<a href="https://wordpress.org/support/plugin/product-reviews-import-export-for-woocommerce/reviews?rate=5#new-post" target="_blank" class="xa-pipe-rating-link" data-reviewed="' . esc_attr__('Thanks for the review.', 'product-reviews-import-export-for-woocommerce') . '">&#9733;&#9733;&#9733;&#9733;&#9733;</a>');
         ?>
     </div>
-    <div class="pipe-premium-features">
-        <ul style="font-weight: bold; color:#666; list-style: none; background:#f8f8f8; padding:20px; margin:20px 15px; font-size: 15px; line-height: 26px;">
-                <li style=""><?php echo __('30 Day Money Back Guarantee','cookie-law-info'); ?></li>
-                <li style=""><?php echo __('Fast and Superior Support','cookie-law-info'); ?></li>
-                <li style="">
-                    <a href="https://www.webtoffee.com/product/product-import-export-woocommerce/" target="_blank" class="button button-primary button-go-pro"><?php _e('Upgrade to Premium', 'wf_pr_rev_import_export'); ?></a>
-                </li>
-            </ul>
-            <span>
-        <ul class="ticked-list">
-            <li><?php _e('Export/Import simple, group, external and variation products.', 'wf_pr_rev_import_export');?></li>
-            <li><?php _e('Export products by category.', 'wf_pr_rev_import_export');?></li>
-            <li><?php _e('Import/Export product reviews.', 'wf_pr_rev_import_export');?></li>
-            <li><?php _e('Various filter options for exporting products.', 'wf_pr_rev_import_export');?> </li>
-            <li><?php _e('Map and transform fields during import.', 'wf_pr_rev_import_export');?></li>
-            <li><?php _e('Manipulate/evaluate data during import.', 'wf_pr_rev_import_export');?></li>
-            <li><?php _e('Choice to update or skip existing imported products.', 'wf_pr_rev_import_export');?></li>
-            <li><?php _e('WPML support for simple products.', 'wf_pr_rev_import_export');?></li>
-            <li><?php _e('Import/Export file via FTP.', 'wf_pr_rev_import_export');?></li>
-            <li><?php _e('Import from URL.', 'wf_pr_rev_import_export');?></li>
-            <li><?php _e('Automatic scheduled import and export.', 'wf_pr_rev_import_export');?></li>
-            <li><?php _e('Supports product reviews export and import.', 'wf_pr_rev_import_export');?></li>
-            <li><?php _e('Third party plugin customization support.', 'wf_pr_rev_import_export');?></li>            
-        </ul>
-    </span>
-    <center> 
-        <a href="https://www.webtoffee.com/category/documentation/product-import-export-plugin-for-woocommerce/" target="_blank" class="button button-doc-demo"><?php _e('Documentation', 'wf_pr_rev_import_export'); ?></a></center>
+    <div class="ier-premium-upgrade wt-ierpro-sidebar">
+
+        <div class="wt-ierpro-header">
+            <div class="wt-ierpro-name">
+                <img src="<?php echo plugins_url('images/product-ie.svg', WF_PrRevImpExpCsv_FILE); ?>" alt="featured img" width="36" height="36">
+                <h4 class="wt-ier-product-name"><?php _e('Product Import Export Plugin For WooCommerce'); ?></h4>
+            </div>
+            <div class="wt-ierpro-mainfeatures">
+                <ul>
+                    <li class="money-back"><?php _e('30 Day Money Back Guarantee'); ?></li>
+                    <li class="support"><?php _e('Fast and Superior Support'); ?></li>
+                </ul>
+                <div class="wt-ierpro-btn-wrapper">
+                    <a href="https://www.webtoffee.com/product/product-import-export-woocommerce/?utm_source=free_plugin_sidebar&utm_medium=Review_imp_exp_basic&utm_campaign=Product_Import_Export&utm_content=<?php echo WF_PR_REV_IMP_EXP_VERSION; ?>" class="wt-ierpro-blue-btn" target="_blank"><?php _e('UPGRADE TO PREMIUM'); ?></a>
+                </div>                
+            </div>
+        </div>
+                <div class="wt-ier-coupon wt-ier-order wt-ier-gopro-cta wt-ierpro-features">
+                    <ul class="ticked-list wt-ierpro-allfeat">
+						<li><?php _e('All free version features'); ?></li>
+						<li><?php _e('Import and export in XLS and XLSX formats'); ?></li>
+						<li><?php _e('XML file type support'); ?></li>							
+                        <li><?php _e('Export and import variable products, subscription products and custom product types'); ?></li>
+                        <li><?php _e('Export and import custom fields and third-party plugin fields'); ?></li>            
+                        <li><?php _e('Run scheduled automatic import and export'); ?></li>
+                        <li><?php _e('Import from URL, FTP/SFTP'); ?></li>
+                        <li><?php _e('Export to FTP/SFTP'); ?></li>
+                        <li><?php _e('Option to export product images as a separate zip file'); ?></li>
+                        <li><?php _e('Tested compatibility with major third-party plugins'); ?></li>
+                    </ul> 
+                </div>  
+		
     </div>
     
     </div>

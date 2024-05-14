@@ -11,12 +11,13 @@ class WF_PrRevImpExpCsv_Exporter {
      */
     public static function do_export() {
         global $wpdb;
-        $export_limit = 999;
+        $export_limit = 99999;
         $delimiter = ',';
-        $products = !empty($_POST['products']) ? $_POST['products'] : '';
+        $products = !empty($_POST['products']) ? array_map('intval',$_POST['products']) : '';
         $csv_columns = include( 'data/data-wf-post-columns.php' );
         $user_columns_name = $csv_columns;
         $export_columns = '';
+        $export_reply = !empty($_POST['v_replycolumn']) ? '1' : '';
 
 
         $wpdb->hide_errors();
@@ -60,11 +61,16 @@ class WF_PrRevImpExpCsv_Exporter {
         unset($row);
         $args = apply_filters('product_reviews_csv_product_export_args', array(
             'status' => 'all',
+            'orderby' => 'comment_ID',
+            'order' => 'ASC',
             'post_type' => 'product',
-//            'meta_key' => 'rating',
             'number' => $export_limit,
             'parent' => 0,
         ));
+        
+        if ($export_reply === '1') {
+            unset($args['parent']);
+        }
 
         if (!empty($products)) {
             $args['post__in'] = implode(',', $products);
@@ -72,7 +78,18 @@ class WF_PrRevImpExpCsv_Exporter {
             $comments_query = new WP_Comment_Query;
             $comments = $comments_query->query($args);
             foreach ($comments as $comment) {
-                $row = array();
+                self::wt_import_to_csv($comment, $csv_columns, $export_columns, $delimiter, $fp, $comments);
+
+            }
+
+        fclose($fp);
+        exit;
+    }
+    
+    
+        public static function wt_import_to_csv($comment, $csv_columns, $export_columns, $delimiter, $fp, $comments) {
+            
+             $row = array();
                 $comment_ID = $comment->comment_ID;
                 $obj = new WF_PrRevImpExpCsv_Exporter();
                 $meta_data = $obj->get_all_meta_data($comment_ID);
@@ -92,27 +109,37 @@ class WF_PrRevImpExpCsv_Exporter {
 
                     $comment->meta->$meta = self::format_export_meta($meta_value, $meta);
                 }
-
+               
                 foreach ($csv_columns as $column => $value) {
                     if (!$export_columns) {
-
+                        if ($column === 'comment_alter_id') {
+                            $row[] = self::format_data($comment_ID);
+                            continue;
+                        }
+                      
+                        if ($column === 'comment_post_ID') {
+                        $temp_product_id = sanitize_text_field($comment->$column);
+                        }
                         if (isset($comment->meta->$column)) {
                             $row[] = self::format_data($comment->meta->$column);
                         } elseif (isset($comment->$column) && !is_array($comments[0]->$column)) {
                             $row[] = self::format_data($comment->$column);
                         }
+                        if ($column === 'product_SKU' && !empty($temp_product_id)) {
+                        $row[] = (string) get_post_meta($temp_product_id, '_sku', true);
+                        continue;
                     }
+                     
+                  }
+                     
                 }
 
                 $row = array_map('WF_PrRevImpExpCsv_Exporter::wrap_column', $row);
                 fwrite($fp, implode($delimiter, $row) . "\n");
                 unset($row);
-            }
-//        }
-
-        fclose($fp);
-        exit;
-    }
+                return;
+            
+        }
 
     /*
      * Format the data if required
@@ -131,9 +158,35 @@ class WF_PrRevImpExpCsv_Exporter {
         $data = (string) urldecode($data);
         $enc = mb_detect_encoding($data, 'UTF-8, ISO-8859-1', true);
         $data = ( $enc == 'UTF-8' ) ? $data : utf8_encode($data);
-        return $data;
+        return self::escape_data( $data );
     }
 
+	/**
+	 * Escape a string to be used in a CSV context
+	 *
+	 * Malicious input can inject formulas into CSV files, opening up the possibility
+	 * for phishing attacks and disclosure of sensitive information.
+	 *
+	 * Additionally, Excel exposes the ability to launch arbitrary commands through
+	 * the DDE protocol.
+	 *
+	 * @see http://www.contextis.com/resources/blog/comma-separated-vulnerabilities/
+	 * @see https://patchstack.com/database/report-preview/53c7a97e-2de1-4ff2-b837-d69e45f6f97c
+	 *
+	 * @param string $data CSV field to escape.
+	 * @return string
+	 */
+	public static function escape_data( $data )
+	{
+		$active_content_triggers = array( '=', '+', '-', '@' );
+
+		if ( in_array( mb_substr( $data, 0, 1 ), $active_content_triggers, true ) ) {
+			$data = "'" . $data;
+		}
+
+		return $data;
+	}	
+	
     /**
      * Wrap a column in quotes for the CSV
      * @param  string data to wrap
@@ -149,5 +202,7 @@ class WF_PrRevImpExpCsv_Exporter {
             'value' => get_comment_meta($id, 'rating', true));
         return $meta_data;
     }
+    
+
 
 }

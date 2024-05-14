@@ -1,0 +1,12 @@
+{
+	"name": "webtoffee/product-reviews-import-export-for-woocommerce",
+	"description": "Product Reviews Import Export for WooCommerce Plugin helps you to easily export and import Product Reviews in your store.",
+	"homepage": "https://www.webtoffee.com/",
+	"version": "1.4.9",
+	"type": "wordpress-plugin",
+	"license": "GPL-3.0-or-later",
+	"prefer-stable": true,
+	"require": {
+		"php": ">=7.4"
+	}
+}

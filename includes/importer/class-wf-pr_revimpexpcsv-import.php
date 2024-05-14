@@ -12,17 +12,18 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 
 	var $id;
 	var $file_url;
+        var $use_sku;
 	var $delimiter;
         var $profile;
 	var $merge_empty_cells;
 
 	// mappings from old information to new
-	var $processed_terms = array();
+//	var $processed_terms = array();
 	var $processed_posts = array();
 	var $post_orphans    = array();
-	var $attachments     = array();
-	var $upsell_skus     = array();
-	var $crosssell_skus  = array();
+//	var $attachments     = array();
+//	var $upsell_skus     = array();
+//	var $crosssell_skus  = array();
 
 	// Results
 	var $import_results  = array();
@@ -62,7 +63,7 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 	 */
 	public function dispatch() {
 		global $woocommerce, $wpdb;
-
+            
 		if ( ! empty( $_POST['delimiter'] ) ) {
 			$this->delimiter = stripslashes( trim( $_POST['delimiter'] ) );
 		}else if ( ! empty( $_GET['delimiter'] ) ) {
@@ -79,20 +80,10 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 		}
                 if ( ! $this->profile )
 			$this->profile = '';
+                if (!empty($_POST['use_sku']))
+                        $this->use_sku = 1;
 
-		/*if ( ! empty( $_POST['merge_empty_cells'] ) || ! empty( $_GET['merge_empty_cells'] ) ) {
-			$this->merge_empty_cells = 1;
-		} else{
-			$this->merge_empty_cells = 0;
-		}*/
-
-		if ( ! empty( $_POST['clean_before_import'] ) || ! empty( $_GET['clean_before_import'] ) ) {
-			$this->clean_before_import = 1;
-		} else{
-			$this->clean_before_import = 0;
-		}
-
-		$step = empty( $_GET['step'] ) ? 0 : (int) $_GET['step'];
+		$step = empty( $_GET['step'] ) ? 0 : absint($_GET['step']);
 
 		switch ( $step ) {
 			case 0 :
@@ -107,12 +98,12 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 				if(!empty($_GET['file_url']))
 					$this->file_url = esc_attr( $_GET['file_url'] );
 				if(!empty($_GET['file_id']))
-					$this->id = $_GET['file_id'] ;
+					$this->id = intval($_GET['file_id']) ;
 
 				if ( !empty($_GET['clearmapping']) || $this->handle_upload() )
 					$this->import_options();
 				else
-					//_e( 'Error with handle_upload!', 'wf_pr_rev_import_export' );
+					//_e( 'Error with handle_upload!', 'product-reviews-import-export-for-woocommerce' );
 					wp_redirect(wp_get_referer().'&wf_product_review_ie_msg=3');
         			exit;
 			break;
@@ -121,7 +112,7 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 
 				check_admin_referer( 'import-woocommerce' );
 
-				$this->id = (int) $_POST['import_id'];
+				$this->id = absint($_POST['import_id']);
 
 				if ( $this->file_url_import_enabled )
 					$this->file_url = esc_attr( $_POST['import_url'] );
@@ -134,15 +125,20 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 				$file = str_replace( "\\", "/", $file );
 
 				if ( $file ) {
+                                      $file_delimiter = $this->detectDelimiter($file);
+                                        if(!empty($file_delimiter) && ($file_delimiter != $this->delimiter)){
+                                            echo '<p class="error"><strong>' . __("Basic version supports only ',' as delimiter. Your file's delimiter seems to be unsupported.", 'users-customers-import-export-for-wp-woocommerce') . '</strong></p>';
+                                            break;
+                                        }
 					?>
 					<table id="import-progress" class="widefat_importer widefat">
 						<thead>
 							<tr>
 								<th class="status">&nbsp;</th>
-								<th class="row"><?php _e( 'Row', 'wf_pr_rev_import_export' ); ?></th>
-								<th><?php _e( 'ID', 'wf_pr_rev_import_export' ); ?></th>
-								<th><?php _e( 'Product Review ID', 'wf_pr_rev_import_export' ); ?></th>
-								<th class="reason"><?php _e( 'Status Msg', 'wf_pr_rev_import_export' ); ?></th>
+								<th class="row"><?php _e( 'Row', 'product-reviews-import-export-for-woocommerce' ); ?></th>
+								<th><?php _e( 'ID', 'product-reviews-import-export-for-woocommerce' ); ?></th>
+								<th><?php _e( 'Product Review ID', 'product-reviews-import-export-for-woocommerce' ); ?></th>
+								<th class="reason"><?php _e( 'Status Msg', 'product-reviews-import-export-for-woocommerce' ); ?></th>
 							</tr>
 						</thead>
 						<tfoot>
@@ -171,13 +167,14 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 								var data = {
 									action: 	'product_reviews_csv_import_request',
 									file:       '<?php echo addslashes( $file ); ?>',
-									mapping:    '<?php echo json_encode( @$_POST['map_from'] ); ?>',
+									mapping:    '<?php echo json_encode( wc_clean(@$_POST['map_from']),JSON_HEX_APOS); ?>',
                                                                         profile:    '<?php echo $this->profile; ?>',
-									eval_field: '<?php echo stripslashes(json_encode(( @$_POST['eval_field']),JSON_HEX_APOS)) ?>',
+									eval_field: '<?php echo stripslashes(json_encode( wc_clean(@$_POST['eval_field']),JSON_HEX_APOS)) ?>',
 									delimiter:  '<?php echo $this->delimiter; ?>',
-									clean_before_import: '<?php echo $this->clean_before_import; ?>',
+                                                                        use_sku:    '<?php echo $this->use_sku; ?>',
 									start_pos:  start_pos,
 									end_pos:    end_pos,
+                                                                        wt_nonce:   '<?php echo wp_create_nonce(WF_PR_REV_IMP_EXP_ID) ?>'
 								};
                                                                 data.eval_field = $.parseJSON(data.eval_field);
 								return $.ajax({
@@ -206,9 +203,9 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 
 												} else if ( results.import_results && $( results.import_results ).size() > 0 ) {
 
-													$.each( results.processed_terms, function( index, value ) {
-														processed_terms.push( value );
-													});
+//													$.each( results.processed_terms, function( index, value ) {
+//														processed_terms.push( value );
+//													});
 
 													$.each( results.processed_posts, function( index, value ) {
 														processed_posts.push( value );
@@ -218,12 +215,12 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 														post_orphans.push( value );
 													});
 
-													$.each( results.attachments, function( index, value ) {
-														attachments.push( value );
-													});
+//													$.each( results.attachments, function( index, value ) {
+//														attachments.push( value );
+//													});
 
-													upsell_skus    = jQuery.extend( {}, upsell_skus, results.upsell_skus );
-													crosssell_skus = jQuery.extend( {}, crosssell_skus, results.crosssell_skus );
+//													upsell_skus    = jQuery.extend( {}, upsell_skus, results.upsell_skus );
+//													crosssell_skus = jQuery.extend( {}, crosssell_skus, results.crosssell_skus );
 
 													$( results.import_results ).each(function( index, row ) {
 
@@ -236,7 +233,7 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 											} catch(err) {}
 
 										} else {
-											$('#import-progress tbody').append( '<tr class="error"><td class="status" colspan="5">' + '<?php _e( 'AJAX Error', 'wf_pr_rev_import_export' ); ?>' + '</td></tr>' );
+											$('#import-progress tbody').append( '<tr class="error"><td class="status" colspan="5">' + '<?php _e( 'AJAX Error', 'product-reviews-import-export-for-woocommerce' ); ?>' + '</td></tr>' );
 										}
 
 										var w = $(window);
@@ -295,73 +292,31 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 							?>
 
 							var data = rows.shift();
-							var regen_count = 0;
+//							var regen_count = 0;
 							import_rows( data[0], data[1] );
 
 							$('body').on( 'product_reviews_csv_import_request_complete', function() {
 								if ( done_count == <?php echo $import_count; ?> ) {
-
-									if ( attachments.length ) {
-
-										$('#import-progress tbody').append( '<tr class="regenerating"><td colspan="5"><div class="progress"></div></td></tr>' );
-
-										index = 0;
-
-										$.each( attachments, function( i, value ) {
-											regenerate_thumbnail( value );
-											index ++;
-											if ( index == attachments.length ) {
-												import_done();
-											}
-										});
-
-									} else {
-										import_done();
-									}
+                                                                    
+                                                                    import_done();							
 
 								} else {
 									// Call next request
 									data = rows.shift();
 									import_rows( data[0], data[1] );
 								}
-							} );
-
-							// Regenerate a specified image via AJAX
-							function regenerate_thumbnail( id ) {
-								$.ajax({
-									type: 'POST',
-									url: ajaxurl,
-									data: { action: "product_reviews_csv_import_regenerate_thumbnail", id: id },
-									success: function( response ) {
-										if ( response !== Object( response ) || ( typeof response.success === "undefined" && typeof response.error === "undefined" ) ) {
-											response = new Object;
-											response.success = false;
-											response.error = "<?php printf( esc_js( __( 'The resize request was abnormally terminated (ID %s). This is likely due to the image exceeding available memory or some other type of fatal error.', 'wf_pr_rev_import_export' ) ), '" + id + "' ); ?>";
-										}
-
-										regen_count ++;
-
-										$('#import-progress tbody .regenerating .progress').css( 'width', ( ( regen_count / attachments.length ) * 100 ) + '%' ).html( regen_count + ' / ' + attachments.length + ' <?php echo esc_js( __( 'thumbnails regenerated', 'wf_pr_rev_import_export' ) ); ?>' );
-
-										if ( ! response.success ) {
-											$('#import-progress tbody').append( '<tr><td colspan="5">' + response.error + '</td></tr>' );
-										}
-									},
-									error: function( response ) {
-										$('#import-progress tbody').append( '<tr><td colspan="5">' + response.error + '</td></tr>' );
-									}
-								});
-							}
+							} );							
 
 							function import_done() {
 								var data = {
 									action: 'product_reviews_csv_import_request',
 									file: '<?php echo $file; ?>',
-									processed_terms: processed_terms,
+//									processed_terms: processed_terms,
 									processed_posts: processed_posts,
 									post_orphans: post_orphans,
-									upsell_skus: upsell_skus,
-									crosssell_skus: crosssell_skus
+//									upsell_skus: upsell_skus,
+//									crosssell_skus: crosssell_skus,
+                                                                        wt_nonce:   '<?php echo wp_create_nonce(WF_PR_REV_IMP_EXP_ID) ?>'
 								};
 
 								$.ajax({
@@ -379,14 +334,19 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 					</script>
 					<?php
 				} else {
-					echo '<p class="error">' . __( 'Error finding uploaded file!', 'wf_pr_rev_import_export' ) . '</p>';
+					echo '<p class="error">' . __( 'Error finding uploaded file!', 'product-reviews-import-export-for-woocommerce' ) . '</p>';
 				}
 			break;
 			case 3 :
-				// Check access - cannot use nonce here as it will expire after multiple requests
-				if ( ! current_user_can( 'manage_woocommerce' ) )
-					die();
-
+				// Check access 
+				$nonce = (isset($_POST['wt_nonce']) ? sanitize_text_field($_POST['wt_nonce']) : '');
+                                if (!wp_verify_nonce($nonce,WF_PR_REV_IMP_EXP_ID) || !WF_Product_Review_Import_Export_CSV::hf_user_permission()) {
+                                    wp_die(__('Access Denied', 'product-reviews-import-export-for-woocommerce'));
+                                }
+                                $file      = stripslashes( $_POST['file'] ); // Validating given path is valid path, not a URL
+                                if (filter_var($file, FILTER_VALIDATE_URL)) {
+                                    die();
+                                }
 				add_filter( 'http_request_timeout', array( $this, 'bump_request_timeout' ) );
 
 				if ( function_exists( 'gc_enable' ) )
@@ -397,10 +357,9 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 				@flush();
 				$wpdb->hide_errors();
 
-				$file      = stripslashes( $_POST['file'] );
-				$mapping   = json_decode( stripslashes( $_POST['mapping'] ), true );
-                                $profile   = isset( $_POST['profile'] ) ? $_POST['profile']:'';
-                                $eval_field = $_POST['eval_field'];
+				$mapping   = json_decode( stripslashes(wc_clean( $_POST['mapping'])), true );
+                                $profile   = isset( $_POST['profile'] ) ? wc_clean($_POST['profile']):'';
+                                $eval_field = wc_clean($_POST['eval_field']);
 				$start_pos = isset( $_POST['start_pos'] ) ? absint( $_POST['start_pos'] ) : 0;
 				$end_pos   = isset( $_POST['end_pos'] ) ? absint( $_POST['end_pos'] ) : '';
 				
@@ -416,12 +375,12 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 
 				$results                    = array();
 				$results['import_results']  = $this->import_results;
-				$results['processed_terms'] = $this->processed_terms;
+//				$results['processed_terms'] = $this->processed_terms;
 				$results['processed_posts'] = $this->processed_posts;
 				$results['post_orphans']    = $this->post_orphans;
-				$results['attachments']     = $this->attachments;
-				$results['upsell_skus']     = $this->upsell_skus;
-				$results['crosssell_skus']  = $this->crosssell_skus;
+//				$results['attachments']     = $this->attachments;
+//				$results['upsell_skus']     = $this->upsell_skus;
+//				$results['crosssell_skus']  = $this->crosssell_skus;
 
 				echo "<!--WC_START-->";
 				echo json_encode( $results );
@@ -429,9 +388,11 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 				exit;
 			break;
 			case 4 :
-				// Check access - cannot use nonce here as it will expire after multiple requests
-				if ( ! current_user_can( 'manage_woocommerce' ) )
-					die();
+				// Check access -
+                                $nonce = (isset($_POST['wt_nonce']) ? sanitize_text_field($_POST['wt_nonce']) : '');
+                                if (!wp_verify_nonce($nonce,WF_PR_REV_IMP_EXP_ID) || !WF_Product_Review_Import_Export_CSV::hf_user_permission()) {
+                                    wp_die(__('Access Denied', 'product-reviews-import-export-for-woocommerce'));
+                                }
 
 				add_filter( 'http_request_timeout', array( $this, 'bump_request_timeout' ) );
 
@@ -443,18 +404,19 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 				@flush();
 				$wpdb->hide_errors();
 
-				$this->processed_terms = isset( $_POST['processed_terms'] ) ? $_POST['processed_terms'] : array();
-				$this->processed_posts = isset( $_POST['processed_posts']) ? $_POST['processed_posts'] : array();
-				$this->post_orphans    = isset( $_POST['post_orphans']) ? $_POST['post_orphans'] : array();
-				$this->crosssell_skus  = isset( $_POST['crosssell_skus']) ? array_filter( (array) $_POST['crosssell_skus'] ) : array();
-				$this->upsell_skus     = isset( $_POST['upsell_skus']) ? array_filter( (array) $_POST['upsell_skus'] ) : array();
+//				$this->processed_terms = isset( $_POST['processed_terms'] ) ? $_POST['processed_terms'] : array();
+				$this->processed_posts = isset( $_POST['processed_posts']) ? array_map('intval', $_POST['processed_posts']) : array();
+				$this->post_orphans    = isset( $_POST['post_orphans']) ? array_map('intval', $_POST['post_orphans']) : array();
+//				$this->crosssell_skus  = isset( $_POST['crosssell_skus']) ? array_filter( (array) $_POST['crosssell_skus'] ) : array();
+//				$this->upsell_skus     = isset( $_POST['upsell_skus']) ? array_filter( (array) $_POST['upsell_skus'] ) : array();
+                                $file = isset($_POST['file']) ? stripslashes($_POST['file']) : '';   
 
-				_e( 'Step 1...', 'wf_pr_rev_import_export' ) . ' ';
+				_e( 'Step 1...', 'product-reviews-import-export-for-woocommerce' ) . ' ';
 
 				wp_defer_term_counting( true );
 				wp_defer_comment_counting( true );
 
-				_e( 'Step 2...', 'wf_pr_rev_import_export' ) . ' ';
+				_e( 'Step 2...', 'product-reviews-import-export-for-woocommerce' ) . ' ';
 
 				echo 'Step 3...' . ' '; // Easter egg
 
@@ -469,13 +431,19 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 
 				$wpdb->query("DELETE FROM `$wpdb->options` WHERE `option_name` LIKE ('_transient_wc_product_type_%')");
 
-				_e( 'Finalizing...', 'wf_pr_rev_import_export' ) . ' ';
+				_e( 'Finalizing...', 'product-reviews-import-export-for-woocommerce' ) . ' ';
 
 
 				// SUCCESS
-				_e( 'Finished. Import complete.', 'wf_pr_rev_import_export' );
+				_e( 'Finished. Import complete.', 'product-reviews-import-export-for-woocommerce' );
 
-				$this->import_end();
+                                if(in_array(pathinfo($file, PATHINFO_EXTENSION),array('txt','csv'))){
+                                    unlink($file);
+                                }
+				$this->import_end(); 
+                               
+                                delete_option( 'wf_prod_review_alter_id' );
+                                
 				exit;
 			break;
 		}
@@ -543,13 +511,13 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 			//if(count(array_intersect_key ( $mapping_from_db[0] , $row)) ==  count($mapping_from_db[0])){	
 				$reset_action     = 'admin.php?clearmapping=1&amp;profile='.$this->profile.'&amp;import=' . $this->import_page . '&amp;step=1&amp;merge=' . ( ! empty( $_GET['merge'] ) ? 1 : 0 ) . '&amp;file_url=' . $this->file_url . '&amp;delimiter=' . $this->delimiter . '&amp;merge_empty_cells=' . $this->merge_empty_cells . '&amp;file_id=' . $this->id . '';
 				$reset_action = esc_attr(wp_nonce_url($reset_action, 'import-upload'));
-				echo '<h3>' . __( 'Columns are pre-selected using the Mapping file: "<b style="color:gray">'.$this->profile.'</b>".  <a href="'.$reset_action.'"> Delete</a> this mapping file.', 'wf_pr_rev_import_export' ) . '</h3>';
+				echo '<h3>' . __( 'Columns are pre-selected using the Mapping file: "<b style="color:gray">'.$this->profile.'</b>".  <a href="'.$reset_action.'"> Delete</a> this mapping file.', 'product-reviews-import-export-for-woocommerce' ) . '</h3>';
 				$saved_mapping = $mapping_from_db[0];
 				$saved_evaluation = $mapping_from_db[1];
 			//}	
 		}
-						
-		$merge = (!empty($_GET['merge']) && $_GET['merge']) ? 1 : 0;
+               		
+		$merge = (!empty($_POST['merge']) && $_POST['merge']) ? 1 : 0;
 
 		include( 'views/html-wf-import-options.php' );
 	}
@@ -559,23 +527,13 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 	 */
 	public function import() {
 		global $woocommerce, $wpdb;
-		if($this->clean_before_import == 1)
-		{
-			$deletequery = "TRUNCATE TABLE wp_comments";
-			if(!$wpdb->query($deletequery)) {
-				$this->add_import_result( 'failed', 'Didn`t able to clean the previous reviews', 'Didn`t able to clean the previous reviews', '-', '' );
-				return;
-			}
-			
-		}
 
 		wp_suspend_cache_invalidation( true );
 
 		$this->hf_log_data_change( 'csv-import', '---' );
-		$this->hf_log_data_change( 'csv-import', __( 'Processing product reviews.', 'wf_pr_rev_import_export' ) );
+		$this->hf_log_data_change( 'csv-import', __( 'Processing product reviews.', 'product-reviews-import-export-for-woocommerce' ) );
 		foreach ( $this->parsed_data as $key => &$item ) {
-
-			$product = $this->parser->parse_product_review( $item, 0 );
+			$product = $this->parser->parse_product_review( $item, 0 ,$this->use_sku);
 			if ( ! is_wp_error( $product ) )
 				$this->process_product_reviews( $product );
 			else
@@ -583,7 +541,7 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 
 			unset( $item, $product );
 		}
-		$this->hf_log_data_change( 'csv-import', __( 'Finished processing product reviews.', 'wf_pr_rev_import_export' ) );
+		$this->hf_log_data_change( 'csv-import', __( 'Finished processing product reviews.', 'product-reviews-import-export-for-woocommerce' ) );
 		wp_suspend_cache_invalidation( false );
 	}
 
@@ -604,12 +562,12 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 		}
 
 		$this->hf_log_data_change( 'csv-import', '---[ New Import ] PHP Memory: ' . $memory . ', WP Memory: ' . $wp_memory );
-		$this->hf_log_data_change( 'csv-import', __( 'Parsing product reviews CSV.', 'wf_pr_rev_import_export' ) );
+		$this->hf_log_data_change( 'csv-import', __( 'Parsing product reviews CSV.', 'product-reviews-import-export-for-woocommerce' ) );
 
 		$this->parser = new WF_CSV_Parser( 'product' );
 
 		list( $this->parsed_data, $this->raw_headers, $position ) = $this->parser->parse_data( $file, $this->delimiter, $mapping, $start_pos, $end_pos, $eval_field );
-		$this->hf_log_data_change( 'csv-import', __( 'Finished parsing product reviews CSV.', 'wf_pr_rev_import_export' ) );
+		$this->hf_log_data_change( 'csv-import', __( 'Finished parsing product reviews CSV.', 'product-reviews-import-export-for-woocommerce' ) );
 
 		unset( $import_data );
 
@@ -647,7 +605,7 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 			$file = wp_import_handle_upload();
 
 			if ( isset( $file['error'] ) ) {
-				echo '<p><strong>' . __( 'Sorry, there has been an error.', 'wf_pr_rev_import_export' ) . '</strong><br />';
+				echo '<p><strong>' . __( 'Sorry, there has been an error.', 'product-reviews-import-export-for-woocommerce' ) . '</strong><br />';
 				echo esc_html( $file['error'] ) . '</p>';
 				return false;
 			}
@@ -664,7 +622,7 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 
 			} else {
 
-				echo '<p><strong>' . __( 'Sorry, there has been an error.', 'wf_pr_rev_import_export' ) . '</strong></p>';
+				echo '<p><strong>' . __( 'Sorry, there has been an error.', 'product-reviews-import-export-for-woocommerce' ) . '</strong></p>';
 				return false;
 
 			}
@@ -705,15 +663,15 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
                 }
 
 		if ( ! empty( $processing_product_id ) && isset( $this->processed_posts[ $processing_product_id ] ) ) {
-			$this->add_import_result( 'skipped', __( 'Product review already processed', 'wf_pr_rev_import_export' ), $processing_product_id  );
-			$this->hf_log_data_change( 'csv-import', __('> Post ID already processed. Skipping.', 'wf_pr_rev_import_export'), true );
+			$this->add_import_result( 'skipped', __( 'Product review already processed', 'product-reviews-import-export-for-woocommerce' ), $processing_product_id  );
+			$this->hf_log_data_change( 'csv-import', __('> Post ID already processed. Skipping.', 'product-reviews-import-export-for-woocommerce'), true );
 			unset( $post );
 			return;
 		}
 
 		if ( ! empty ( $post['post_status'] ) && $post['post_status'] == 'auto-draft' ) {
-			$this->add_import_result( 'skipped', __( 'Skipping auto-draft', 'wf_pr_rev_import_export' ), $processing_product_id );
-			$this->hf_log_data_change( 'csv-import', __('> Skipping auto-draft.', 'wf_pr_rev_import_export'), true );
+			$this->add_import_result( 'skipped', __( 'Skipping auto-draft', 'product-reviews-import-export-for-woocommerce' ), $processing_product_id );
+			$this->hf_log_data_change( 'csv-import', __('> Skipping auto-draft.', 'product-reviews-import-export-for-woocommerce'), true );
 			unset( $post );
 			return;
 		}
@@ -722,9 +680,9 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 		if ( ! $merging ) {
 			if ( $is_post_exist_in_db ) {
                                 
-                $usr_msg = 'Product review skipped.'; 
-                $this->add_import_result( 'skipped', __( $usr_msg, 'wf_pr_rev_import_export' ), $processing_product_id );
-				$this->hf_log_data_change( 'csv-import', sprintf( __('> &#8220;%s&#8221;'.$usr_msg, 'wf_pr_rev_import_export'), esc_html($processing_product_title) ), true );
+                $usr_msg = "Import skipped. Another comment/review exists with the same ID."; 
+                $this->add_import_result( 'skipped', __( $usr_msg, 'product-reviews-import-export-for-woocommerce' ), $processing_product_id );
+				$this->hf_log_data_change( 'csv-import', sprintf( __('> &#8220;%s&#8221;'.$usr_msg, 'product-reviews-import-export-for-woocommerce'), esc_html($processing_product_title) ), true );
 				unset( $post );
 				return;
 			}
@@ -735,9 +693,9 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
                        
 			// Only merge fields which are set
 			$post_id = $processing_product_id;
-
-			$this->hf_log_data_change( 'csv-import', sprintf( __('> Merging post ID %s.', 'wf_pr_rev_import_export'), $post_id ), true );
-
+                        
+			$this->hf_log_data_change( 'csv-import', sprintf( __('> Merging post ID %s.', 'product-reviews-import-export-for-woocommerce'), $post_id ), true );
+                        $postdata['comment_type'] = 'review';
 			if ( ! empty( $post['comment_post_ID'] ) ) {
 				$postdata['comment_post_ID'] = $post['comment_post_ID'];
 			}
@@ -776,36 +734,49 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 			}
 
 		} else {
-            $merging = FALSE;
+                        $merging = FALSE;
 			// Insert product
-			$this->hf_log_data_change( 'csv-import', sprintf( __('> Inserting %s', 'wf_pr_rev_import_export'), esc_html( $processing_product_id ) ), true );
+			$this->hf_log_data_change( 'csv-import', sprintf( __('> Inserting %s', 'product-reviews-import-export-for-woocommerce'), esc_html( $processing_product_id ) ), true );
+                      $review_parent = $post['comment_parent'];
+                      $comment_parent_session= unserialize( get_option( 'wf_prod_review_alter_id'));
+                      if ($post['comment_parent']!= 0) {
+                                $arr_index = $post['comment_parent'];
+                                if (isset($comment_parent_session['wt_review_basic']) && array_key_exists($arr_index, $comment_parent_session['wt_review_basic'])) {
+                                    $review_parent = $comment_parent_session['wt_review_basic'][$arr_index];
+                                }
+                            
+                        }
 
-			$postdata = array(
+            $postdata = array(
 				'comment_ID'      		=> $processing_product_id,
 				'comment_post_ID' 		=> $post['comment_post_ID'] ,
-				'comment_date'      	=> ( $post['comment_date'] ) ? date( 'Y-m-d H:i:s', strtotime( $post['comment_date'] )) : '',
-				'comment_date_gmt'  	=> ( $post['comment_date_gmt'] ) ? date( 'Y-m-d H:i:s', strtotime( $post['comment_date_gmt'] )) : '',
+				'comment_date'                  => ( $post['comment_date'] ) ? date( 'Y-m-d H:i:s', strtotime( $post['comment_date'] )) : '',
+				'comment_date_gmt'              => ( $post['comment_date_gmt'] ) ? date( 'Y-m-d H:i:s', strtotime( $post['comment_date_gmt'] )) : '',
 				'comment_author'   		=> $post['comment_author'],
-                                'comment_author_url' => $post['comment_author_url'],
-				'comment_author_email'  => $post['comment_author_email'],
-				'comment_content'      	=> ( $post['comment_content'] ) ? $post['comment_content'] : sanitize_title( $comment_content ),
-				'comment_approved'    	=> ( $post['comment_approved'] ) ? $post['comment_approved'] : 0,
-				'comment_parent'     	=> $post['comment_parent'],
+                                'comment_author_url'            => $post['comment_author_url'],
+				'comment_author_email'          => $post['comment_author_email'],
+				'comment_content'           	=> ( $post['comment_content'] ) ? $post['comment_content'] : sanitize_title( $comment_content ),
+				'comment_approved'              => ( $post['comment_approved'] ) ? $post['comment_approved'] : 0,
+                                'comment_type'                  => 'review',
+				'comment_parent'                => $review_parent,
 				'user_id'      			=> $post['user_id'],
 			);
                         
 			$post_id = wp_insert_comment( $postdata, true );
+                            $comment_parent_session['wt_review_basic'][$post['comment_alter_id']] = $post_id;
+                            update_option('wf_prod_review_alter_id', serialize($comment_parent_session));
+                            unset($comment_parent_session);
 
 			if ( is_wp_error( $post_id ) ) {
 
-				$this->add_import_result( 'failed', __( 'Failed to import product review', 'wf_pr_rev_import_export' ), $processing_product_id);
-				$this->hf_log_data_change( 'csv-import', sprintf( __( 'Failed to import product review &#8220;%s&#8221;', 'wf_pr_rev_import_export' ), esc_html($processing_product_title) ) );
+				$this->add_import_result( 'failed', __( 'Failed to import product review', 'product-reviews-import-export-for-woocommerce' ), $processing_product_id);
+				$this->hf_log_data_change( 'csv-import', sprintf( __( 'Failed to import product review &#8220;%s&#8221;', 'product-reviews-import-export-for-woocommerce' ), esc_html($processing_product_title) ) );
 				unset( $post );
 				return;
 
 			} else {
 
-				$this->hf_log_data_change( 'csv-import', sprintf( __('> Inserted - post ID is %s.', 'wf_pr_rev_import_export'), $post_id ) );
+				$this->hf_log_data_change( 'csv-import', sprintf( __('> Inserted - post ID is %s.', 'product-reviews-import-export-for-woocommerce'), $post_id ) );
 
 			}
 		}
@@ -823,22 +794,22 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 		{
 			if ( ! $result &&  ! $result3) 
 			{
-				$this->add_import_result( 'failed', __( 'No update occur for this product review', 'wf_pr_rev_import_export' ), $post_id );
+				$this->add_import_result( 'failed', __( 'No update occur for this product review', 'product-reviews-import-export-for-woocommerce' ), $post_id );
 				
-				$this->hf_log_data_change( 'csv-import', sprintf( __('> Failed to update product review %s', 'wf_pr_rev_import_export'), $post_id ), true );
+				$this->hf_log_data_change( 'csv-import', sprintf( __('> Failed to update product review %s', 'product-reviews-import-export-for-woocommerce'), $post_id ), true );
 				unset( $post );
 				return;
 			} else 
 			{
-				$this->hf_log_data_change( 'csv-import', __( '> Merged post data: ', 'wf_pr_rev_import_export' ) . print_r( $postdata, true ) );
+				$this->hf_log_data_change( 'csv-import', __( '> Merged post data: ', 'product-reviews-import-export-for-woocommerce' ) . print_r( $postdata, true ) );
 			}
 		}
 		if ( $merging ) {
 			$this->add_import_result( 'merged', 'Merge successful', $post_id );
-			$this->hf_log_data_change( 'csv-import', sprintf( __('> Finished merging post ID %s.', 'wf_pr_rev_import_export'), $post_id ) );
+			$this->hf_log_data_change( 'csv-import', sprintf( __('> Finished merging post ID %s.', 'product-reviews-import-export-for-woocommerce'), $post_id ) );
 		} else {
 			$this->add_import_result( 'imported', 'Import successful', $post_id );
-			$this->hf_log_data_change( 'csv-import', sprintf( __('> Finished importing post ID %s.', 'wf_pr_rev_import_export'), $post_id ) );
+			$this->hf_log_data_change( 'csv-import', sprintf( __('> Finished importing post ID %s.', 'product-reviews-import-export-for-woocommerce'), $post_id ) );
 		}
 		unset( $postdata,$post );
 	}
@@ -853,92 +824,12 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 			'reason'     => $reason,
 		);
 	}
-
-	
-
-	/**
-	 * Attempt to download a remote file attachment
-	 */
-	public function fetch_remote_file( $url, $post ) {
-
-		// extract the file name and extension from the url
-		$file_name 		= basename( current( explode( '?', $url ) ) );
-		$wp_filetype 	= wp_check_filetype( $file_name, null );
-		$parsed_url 	= @parse_url( $url );
-
-		// Check parsed URL
-		if ( ! $parsed_url || ! is_array( $parsed_url ) )
-			return new WP_Error( 'import_file_error', 'Invalid URL' );
-
-		// Ensure url is valid
-		$url = str_replace( " ", '%20', $url );
-
-		// Get the file
-		$response = wp_remote_get( $url, array(
-			'timeout' => 10
-		) );
-
-		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 )
-			return new WP_Error( 'import_file_error', 'Error getting remote image' );
-
-		// Ensure we have a file name and type
-		if ( ! $wp_filetype['type'] ) {
-
-			$headers = wp_remote_retrieve_headers( $response );
-
-			if ( isset( $headers['content-disposition'] ) && strstr( $headers['content-disposition'], 'filename=' ) ) {
-
-				$disposition = end( explode( 'filename=', $headers['content-disposition'] ) );
-				$disposition = sanitize_file_name( $disposition );
-				$file_name   = $disposition;
-
-			} elseif ( isset( $headers['content-type'] ) && strstr( $headers['content-type'], 'image/' ) ) {
-
-				$file_name = 'image.' . str_replace( 'image/', '', $headers['content-type'] );
-
-			}
-
-			unset( $headers );
-		}
-
-		// Upload the file
-		$upload = wp_upload_bits( $file_name, '', wp_remote_retrieve_body( $response ) );
-
-		if ( $upload['error'] )
-			return new WP_Error( 'upload_dir_error', $upload['error'] );
-
-		// Get filesize
-		$filesize = filesize( $upload['file'] );
-
-		if ( 0 == $filesize ) {
-			@unlink( $upload['file'] );
-			unset( $upload );
-			return new WP_Error( 'import_file_error', __('Zero size file downloaded', 'wf_pr_rev_import_export') );
-		}
-
-		unset( $response );
-
-		return $upload;
-	}
-
-	/**
-	 * Decide what the maximum file size for downloaded attachments is.
-	 * Default is 0 (unlimited), can be filtered via import_attachment_size_limit
-	 *
-	 * @return int Maximum attachment file size to import
-	 */
-	public function max_attachment_size() {
-		return apply_filters( 'import_attachment_size_limit', 0 );
-	}
-
-	
-
 	
 	
 	// Display import page title
 	public function header() {
 		echo '<div class="wrap"><div class="icon32" id="icon-woocommerce-importer"><br></div>';
-		echo '<h2>' . ( empty( $_GET['merge'] ) ? __( 'Import', 'wf_pr_rev_import_export' ) : __( 'Merge Product Reviews', 'wf_pr_rev_import_export' ) ) . '</h2>';
+		echo '<h2>' . ( empty( $_GET['merge'] ) ? __( 'Import', 'product-reviews-import-export-for-woocommerce' ) : __( 'Merge Product Reviews', 'product-reviews-import-export-for-woocommerce' ) ) . '</h2>';
 	}
 
 	// Close div.wrap
@@ -950,11 +841,12 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 	 * Display introductory text and file upload form
 	 */
 	public function greet() {
-		$action     = 'admin.php?import=product_reviews_csv&amp;step=1&amp;merge=' . ( ! empty( $_GET['merge'] ) ? 1 : 0 );
+		$action     = 'admin.php?import=product_reviews_csv&amp;step=1';
 		$bytes      = apply_filters( 'import_upload_size_limit', wp_max_upload_size() );
 		$size       = size_format( $bytes );
 		$upload_dir = wp_upload_dir();
                 $ftp_settings = get_option( 'wf_shipment_tracking_importer_ftp');
+                $tab = 'import';
 		include( 'views/html-wf-import-greeting.php' );
 	}
 
@@ -965,5 +857,22 @@ class WF_PrRevImpExpCsv_Import extends WP_Importer {
 	public function bump_request_timeout( $val ) {
 		return 60;
 	}
+        
+        public function detectDelimiter($csvFile) {
+        $delimiters = array(
+            ';' => 0,
+            ',' => 0,
+            "\t" => 0,
+            "|" => 0
+        );
+
+        $handle = @fopen($csvFile, "r");
+        $firstLine = @fgets($handle);
+        @fclose($handle); 
+        foreach ($delimiters as $delimiter => &$count) {
+            $count = count(str_getcsv($firstLine, $delimiter));
+        }
+        return array_search(max($delimiters), $delimiters);
+    }
     
 }
