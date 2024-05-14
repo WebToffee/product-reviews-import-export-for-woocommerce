@@ -1,14 +1,14 @@
 <?php
 
 /*
-  Plugin Name: Product Reviews Import Export
+  Plugin Name: Product Reviews Import Export for WooCommerce
   Plugin URI: https://wordpress.org/plugins/product-reviews-import-export-for-woocommerce/
   Description: Import and Export Products Reviews From and To your WooCommerce Store.
   Author: WebToffee
   Author URI: https://www.webtoffee.com/product/product-import-export-woocommerce/
-  Version: 1.3.0
-  WC tested up to: 3.8.1
-  Text Domain: wf_pr_rev_import_export
+  Version: 1.4.9
+  WC tested up to: 7.1
+  Text Domain: product-reviews-import-export-for-woocommerce
   License: GPLv3
   License URI: https://www.gnu.org/licenses/gpl-3.0.html
  */
@@ -20,10 +20,14 @@ if (!defined('ABSPATH') || !is_admin()) {
 define("WF_PR_REV_IMP_EXP_ID", "wf_pr_rev_imp_exp");
 define("WF_PR_REV_CSV_IM_EX", "wf_pr_rev_csv_im_ex");
 define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
+define( 'WF_PR_REV_IMP_EXP_VERSION', '1.4.9' );
 /**
  * Check if WooCommerce is active
  */
-//if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+if ( ! in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins'))) &&  !array_key_exists( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_site_option( 'active_sitewide_plugins', array() ) ) )) { // deactive if woocommerce in not active
+    require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
+    deactivate_plugins( plugin_basename(__FILE__) );
+}
 
     if (!class_exists('WF_Product_Review_Import_Export_CSV')) :
 
@@ -48,32 +52,28 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
                 add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'wf_plugin_action_links'));
                 add_action('init', array($this, 'load_plugin_textdomain'));
                 add_action('init', array($this, 'catch_export_request'), 20);
-                add_action('init', array($this, 'catch_save_settings'), 20);
                 add_action('admin_init', array($this, 'register_importers'));
 
                 add_filter('admin_footer_text', array($this, 'WT_admin_footer_text'), 100);
                 add_action('wp_ajax_pripe_wt_review_plugin', array($this, "review_plugin"));
-
-
-                // if (!get_option('PREIPF_Webtoffee_storefrog_admin_notices_dismissed')) {
-                //     add_action('admin_notices', array($this, 'webtoffee_storefrog_admin_notices'));
-                //     add_action('wp_ajax_PREIPF_webtoffee_storefrog_notice_dismiss', array($this, 'webtoffee_storefrog_notice_dismiss'));
-                // }
-
+                
                 include_once( 'includes/class-wf-pr_revimpexpcsv-admin-screen.php' );
                 include_once( 'includes/importer/class-wf-pr_revimpexpcsv-importer.php' );
 
                 if (defined('DOING_AJAX')) {
                     include_once( 'includes/class-wf-pr_revimpexpcsv-ajax-handler.php' );
                 }
+                 // review request
+                include_once 'includes/class-wf-revimpexpcsv-plugin-review-request.php';
             }
+            
 
-            public function wf_plugin_action_links($links) {
+        public function wf_plugin_action_links($links) {
                 $plugin_links = array(
-                    '<a href="' . admin_url('admin.php?page=wf_pr_rev_csv_im_ex') . '">' . __('Import Export', 'wf_pr_rev_import_export') . '</a>',
-                    '<a target="_blank" href="https://www.webtoffee.com/product/product-import-export-woocommerce/" style="color:#3db634;"> ' . __('Premium Upgrade', 'wf_pr_rev_import_export') . '</a>',
-                    '<a target="_blank" href="https://www.webtoffee.com/support/">' . __('Support', 'wf_pr_rev_import_export') . '</a>',
-                    '<a target="_blank" href="https://wordpress.org/support/plugin/product-reviews-import-export-for-woocommerce/reviews?rate=5#new-post">' . __('Review', 'wf_pr_rev_import_export') . '</a>',
+                    '<a href="' . admin_url('admin.php?page=wf_pr_rev_csv_im_ex') . '">' . __('Import Export', 'product-reviews-import-export-for-woocommerce') . '</a>',
+                    '<a target="_blank" href="https://www.webtoffee.com/product/product-import-export-woocommerce/?utm_source=free_plugin_listing&utm_medium=Review_imp_exp_basic&utm_campaign=Product_Import_Export&utm_content='.WF_PR_REV_IMP_EXP_VERSION.'" style="color:#3db634;"> ' . __('Premium Upgrade', 'product-reviews-import-export-for-woocommerce') . '</a>',
+                    '<a target="_blank" href="https://www.webtoffee.com/support/">' . __('Support', 'product-reviews-import-export-for-woocommerce') . '</a>',
+                    '<a target="_blank" href="https://wordpress.org/support/plugin/product-reviews-import-export-for-woocommerce/reviews?rate=5#new-post">' . __('Review', 'product-reviews-import-export-for-woocommerce') . '</a>',
                 );
                 return array_merge($plugin_links, $links);
             }
@@ -90,13 +90,13 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
 
                 switch ($wf_product_review_ie_msg) {
                     case "1":
-                        echo '<div class="update"><p>' . __('Successfully uploaded via FTP.', 'wf_pr_rev_import_export') . '</p></div>';
+                        echo '<div class="update"><p>' . __('Successfully uploaded via FTP.', 'product-reviews-import-export-for-woocommerce') . '</p></div>';
                         break;
                     case "2":
-                        echo '<div class="error"><p>' . __('Error while uploading via FTP.', 'wf_pr_rev_import_export') . '</p></div>';
+                        echo '<div class="error"><p>' . __('Error while uploading via FTP.', 'product-reviews-import-export-for-woocommerce') . '</p></div>';
                         break;
                     case "3":
-                        echo '<div class="error"><p>' . __('Please choose the file in CSV format using Method 1.', 'wf_pr_rev_import_export') . '</p></div>';
+                        echo '<div class="error"><p>' . __('Please choose the file in CSV format using Method 1.', 'product-reviews-import-export-for-woocommerce') . '</p></div>';
                         break;
                 }
             }
@@ -113,7 +113,7 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
              * Handle localisation
              */
             public function load_plugin_textdomain() {
-                load_plugin_textdomain('wf_pr_rev_import_export', false, dirname(plugin_basename(__FILE__)) . '/lang/');
+                load_plugin_textdomain('product-reviews-import-export-for-woocommerce', false, dirname(plugin_basename(__FILE__)) . '/lang/');
             }
 
             /**
@@ -123,7 +123,7 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
                 if (!empty($_GET['action']) && !empty($_GET['page']) && $_GET['page'] == 'wf_pr_rev_csv_im_ex') {
                     switch ($_GET['action']) {
                         case "export" :
-                            $user_ok = $this->hf_user_permission();
+                            $user_ok = self::hf_user_permission();
                             if ($user_ok) {
                                 include_once( 'includes/exporter/class-wf-pr_revimpexpcsv-exporter.php' );
                                 WF_PrRevImpExpCsv_Exporter::do_export();
@@ -135,25 +135,14 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
                 }
             }
 
-            public function catch_save_settings() {
-                if (!empty($_GET['action']) && !empty($_GET['page']) && $_GET['page'] == 'wf_pr_rev_csv_im_ex') {
-                    switch ($_GET['action']) {
-                        case "settings" :
-                            include_once( 'includes/settings/class-wf-pr_revimpexpcsv-settings.php' );
-                            WF_PrRevImpExpCsv_Settings::save_settings();
-                            break;
-                    }
-                }
-            }
-
             /**
              * Register importers for use
              */
             public function register_importers() {
-                register_importer('product_reviews_csv', 'WooCommerce Product Reviews (CSV)', __('Import <strong>product reviews</strong> to your store via a csv file.', 'wf_pr_rev_import_export'), 'WF_PrRevImpExpCsv_Importer::product_importer');
+                register_importer('product_reviews_csv', 'WooCommerce Product Reviews (CSV)', __('Import <strong>product reviews</strong> to your store via a csv file.', 'product-reviews-import-export-for-woocommerce'), 'WF_PrRevImpExpCsv_Importer::product_importer');
             }
 
-            private function hf_user_permission() {
+            public static function hf_user_permission() {
                 // Check if user has rights to export
                 $current_user = wp_get_current_user();
                 $current_user->roles = apply_filters('hf_add_user_roles', $current_user->roles);
@@ -171,7 +160,7 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
             
             function webtoffee_storefrog_admin_notices() {
 
-                if (apply_filters('webtoffee_storefrog_suppress_admin_notices', false)) {
+                if (apply_filters('webtoffee_storefrog_suppress_admin_notices', false) || !self::hf_user_permission()) {
                     return;
                 }
                 $screen = get_current_screen();
@@ -179,8 +168,8 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
                 $allowed_screen_ids = array('woocommerce_page_wf_pr_rev_csv_im_ex');
                 if (in_array($screen->id, $allowed_screen_ids) || (isset($_GET['import']) && $_GET['import'] == 'product_reviews_csv')) {
 
-                    $notice = __('<h3>Save Time, Money & Hassle on Your WooCommerce Data Migration?</h3>', 'wf_pr_rev_import_export');
-                    $notice .= __('<h3>Use StoreFrog Migration Services.</h3>', 'wf_pr_rev_import_export');
+                    $notice = __('<h3>Save Time, Money & Hassle on Your WooCommerce Data Migration?</h3>', 'product-reviews-import-export-for-woocommerce');
+                    $notice .= __('<h3>Use StoreFrog Migration Services.</h3>', 'product-reviews-import-export-for-woocommerce');
 
                     $content = '<style>.webtoffee-storefrog-nav-tab.updated {z-index:2; display: flex;align-items: center;margin: 18px 20px 10px 0;padding:23px;border-left-color: #2c85d7!important}.webtoffee-storefrog-nav-tab ul {margin: 0;}.webtoffee-storefrog-nav-tab h3 {margin-top: 0;margin-bottom: 9px;font-weight: 500;font-size: 16px;color: #2880d3;}.webtoffee-storefrog-nav-tab h3:last-child {margin-bottom: 0;}.webtoffee-storefrog-banner {flex-basis: 20%;padding: 0 15px;margin-left: auto;} .webtoffee-storefrog-banner a:focus{box-shadow: none;}</style>';
                     $content .= '<div class="updated woocommerce-message webtoffee-storefrog-nav-tab notice is-dismissible"><ul>' . $notice . '</ul><div class="webtoffee-storefrog-banner"><a href="http://www.storefrog.com/" target="_blank"> <img src="' . plugins_url(basename(plugin_dir_path(WF_PrRevImpExpCsv_FILE))) . '/images/storefrog.png"/></a></div><div style="position: absolute;top: 0;right: 1px;z-index: 10000;" ><button type="button" id="webtoffee-storefrog-notice-dismiss" class="notice-dismiss"><span class="screen-reader-text">' . __('Dismiss this notice.', 'wf_order_import_export') . '</span></button></div></div>';
@@ -197,7 +186,7 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
 
             function webtoffee_storefrog_notice_dismiss() {
 
-                if (!current_user_can('manage_woocommerce')) {
+                if (!self::hf_user_permission()) {
                     wp_die(-1);
                 }
                 update_option('PREIPF_Webtoffee_storefrog_admin_notices_dismissed', 1);
@@ -205,7 +194,7 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
             }
 
             public function WT_admin_footer_text($footer_text) {
-                if (!current_user_can('manage_woocommerce') || !function_exists('wc_get_screen_ids')) {
+                if (!self::hf_user_permission()) {
                     return $footer_text;
                 }
                 $screen = get_current_screen();
@@ -213,7 +202,7 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
                 if (in_array($screen->id, $allowed_screen_ids) || (isset($_GET['import']) && $_GET['import'] == 'product_reviews_csv')) {
                     if (!get_option('pripe_wt_plugin_reviewed')) {
                         $footer_text = sprintf(
-                                __('If you like the plugin please leave us a %1$s review.', 'wf_pr_rev_import_export'), '<a href="https://wordpress.org/support/plugin/product-reviews-import-export-for-woocommerce/reviews/?rate=5#new-post" target="_blank" class="wt-review-link" data-rated="' . esc_attr__('Thanks :)', 'wf_pr_rev_import_export') . '">&#9733;&#9733;&#9733;&#9733;&#9733;</a>'
+                                __('If you like the plugin please leave us a %1$s review.', 'product-reviews-import-export-for-woocommerce'), '<a href="https://wordpress.org/support/plugin/product-reviews-import-export-for-woocommerce/reviews/?rate=5#new-post" target="_blank" class="wt-review-link" data-rated="' . esc_attr__('Thanks :)', 'product-reviews-import-export-for-woocommerce') . '">&#9733;&#9733;&#9733;&#9733;&#9733;</a>'
                         );
                         wc_enqueue_js(
                                 "jQuery( 'a.wt-review-link' ).click( function() {
@@ -222,7 +211,7 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
                                            });"
                         );
                     } else {
-                        $footer_text = __('Thank you for your review.', 'wf_pr_rev_import_export');
+                        $footer_text = __('Thank you for your review.', 'product-reviews-import-export-for-woocommerce');
                     }
                 }
 
@@ -230,19 +219,18 @@ define("WF_ROOT_FILE_PATH", plugin_dir_path(__FILE__));
             }
 
             public function review_plugin() {
-                if (!current_user_can('manage_woocommerce')) {
+                if (!self::hf_user_permission()) {
                     wp_die(-1);
                 }
                 update_option('pripe_wt_plugin_reviewed', 1);
                 wp_die();
-            }
+            }                 
 
         }
 
         endif;
 
     new WF_Product_Review_Import_Export_CSV();
-//}
     
 
 
@@ -251,14 +239,33 @@ register_activation_hook(__FILE__, 'hf_welcome_screen_activate_basic_review');
 function hf_welcome_screen_activate_basic_review() {
     if(!class_exists( 'WooCommerce' )){
         deactivate_plugins(basename(__FILE__));
-        wp_die(__("WooCommerce is not installed/actived. it is required for this plugin to work properly. Please activate WooCommerce.", "wf_pr_rev_import_export"), "", array('back_link' => 1));
+        wp_die(__("WooCommerce is not installed/actived. it is required for this plugin to work properly. Please activate WooCommerce.", "product-reviews-import-export-for-woocommerce"), "", array('back_link' => 1));
     }
     if (is_plugin_active('product-csv-import-export-for-woocommerce/product-csv-import-export.php')) {
         deactivate_plugins(basename(__FILE__));
-        wp_die(__("Is everything fine? You already have the Premium version installed in your website. For any issues, kindly raise a ticket via <a target='_blank' href='https://www.webtoffee.com/support/'>support</a>", "wf_pr_rev_import_export"), "", array('back_link' => 1));
+        wp_die(__("Is everything fine? You already have the Premium version installed in your website. For any issues, kindly raise a ticket via <a target='_blank' href='https://www.webtoffee.com/support/'>support</a>", "product-reviews-import-export-for-woocommerce"), "", array('back_link' => 1));
     }
 }
 
+
+
+if ( !function_exists( 'wt_product_review_imex_basic_plugin_screen_update_js' ) ) {
+
+	function wt_product_review_imex_basic_plugin_screen_update_js() {
+		?>
+		<script>
+		( function ( $ ) {
+		var update_dv = $( '#product-reviews-import-export-for-woocommerce-update' );
+		update_dv.find( '.wt-product-review-update-message' ).next( 'p' ).remove();
+		update_dv.find( 'a.update-link:eq(0)' ).click( function () {
+			$( '.wt-product-review-update-message' ).remove();
+		} );
+		} )( jQuery );
+		</script>
+		<?php
+	}
+
+}
 
 /*
  *  Displays update information for a plugin. 
@@ -267,11 +274,11 @@ function wt_product_reviews_import_export_for_woocommerce_update_message( $data,
 {
     if(isset( $data['upgrade_notice']))
     {
+		add_action( 'admin_print_footer_scripts', 'wt_product_review_imex_basic_plugin_screen_update_js' );
         printf(
-        '<div class="update-message wt-update-message">%s</div>',
+        '<div class="update-message wt-product-review-update-message">%s</div>',
            $data['upgrade_notice']
         );
     }
 }
 add_action( 'in_plugin_update_message-product-reviews-import-export-for-woocommerce/product-reviews-import-export.php', 'wt_product_reviews_import_export_for_woocommerce_update_message', 10, 2 );
-

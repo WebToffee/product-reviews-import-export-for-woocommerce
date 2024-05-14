@@ -20,7 +20,7 @@ class WF_ProdReviewImpExpCsv_Admin_Screen {
 	 */
 	public function admin_notices() {
 		if ( ! function_exists( 'mb_detect_encoding' ) ) {
-			echo '<div class="error"><p>' . __( 'Product Review CSV Import Export requires the function <code>mb_detect_encoding</code> to import and export CSV files. Please ask your hosting provider to enable this function.', 'wf_pr_rev_import_export' ) . '</p></div>';
+			echo '<div class="error"><p>' . __( 'Product Review CSV Import Export requires the function <code>mb_detect_encoding</code> to import and export CSV files. Please ask your hosting provider to enable this function.', 'product-reviews-import-export-for-woocommerce' ) . '</p></div>';
 		}
 	}
 
@@ -28,7 +28,7 @@ class WF_ProdReviewImpExpCsv_Admin_Screen {
 	 * Admin Menu
 	 */
 	public function admin_menu() {
-		$page = add_submenu_page( 'woocommerce', __( 'Product Reviews Im-Ex', 'wf_pr_rev_import_export' ), __( 'Product Reviews Im-Ex', 'wf_pr_rev_import_export' ), apply_filters( 'product_reviews_csv_product_role', 'manage_woocommerce' ), 'wf_pr_rev_csv_im_ex', array( $this, 'output' ) );
+		$page = add_submenu_page( 'woocommerce', __( 'Product Reviews Im-Ex', 'product-reviews-import-export-for-woocommerce' ), __( 'Product Reviews Im-Ex', 'product-reviews-import-export-for-woocommerce' ), apply_filters( 'product_reviews_csv_product_role', 'manage_woocommerce' ), 'wf_pr_rev_csv_im_ex', array( $this, 'output' ) );
 	}
          /**
 	 * Get WC Plugin path without fail on any version
@@ -62,12 +62,10 @@ class WF_ProdReviewImpExpCsv_Admin_Screen {
 	 */
 	public function output() {
                 
-		$tab = 'import';
+		$tab = 'export';
             if (!empty($_GET['tab'])) {
-                if ($_GET['tab'] == 'export') {
-                    $tab = 'export';
-                } else if ($_GET['tab'] == 'settings') {
-                    $tab = 'settings';
+                if ($_GET['tab'] == 'import') {
+                    $tab = 'import';                
                 } else if ($_GET['tab'] == 'help') {
                     $tab = 'help';
                 }
@@ -80,17 +78,16 @@ class WF_ProdReviewImpExpCsv_Admin_Screen {
 	 * Admin page for importing
 	 */
 	public function admin_import_page() {
-		
+//            admin_url('admin.php?import=product_reviews_csv');
 		include( 'views/import/html-wf-import-product-reviews.php' );
-		include( 'views/export/html-wf-export-product-reviews.php' );
+//		include( 'views/export/html-wf-export-product-reviews.php' );
 	}
 
 	/**
 	 * Admin Page for exporting
 	 */
 	public function admin_export_page() {
-        $post_columns = include( 'exporter/data/data-wf-post-columns.php' );
-		include( 'views/export/html-wf-export-product-reviews.php' );
+        include( 'views/export/html-wf-export-product-reviews.php' );
 	}
         /**
         * Admin Page for help

@@ -96,7 +96,8 @@ class WF_CSV_Parser {
 	 * @param  integer $merge_empty_cells
 	 * @return array
 	 */
-	public function parse_product_review( $item, $merge_empty_cells = 0 ) {
+	public function parse_product_review( $item, $merge_empty_cells = 0, $use_sku = 0 ) {
+          
 		global $WF_CSV_Product_Review_Import, $wpdb;
 		$this->row++;
 
@@ -110,12 +111,12 @@ class WF_CSV_Parser {
 
 			$product['merging'] = true;
 
-			$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', sprintf( __('> Row %s - preparing for merge.', 'wf_pr_rev_import_export'), $this->row ) );
+			$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', sprintf( __('> Row %s - preparing for merge.', 'product-reviews-import-export-for-woocommerce'), $this->row ) );
 
 			// Required fields
 			if ( ! $post_id ) {
 
-				$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', __( '> > Cannot merge without id. Importing instead.', 'wf_pr_rev_import_export') );
+				$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', __( '> > Cannot merge without id. Importing instead.', 'product-reviews-import-export-for-woocommerce') );
 
 				$merging = false;
 			} else {
@@ -125,21 +126,21 @@ class WF_CSV_Parser {
 				{
                     $post_db_type = $this->post_defaults['post_type'];
                     $post_pass_type = '"'.$post_db_type.'"';
-// Check product to merge exists
+                    // Check product to merge exists
                     $db_query = $wpdb->prepare("
 						SELECT comment_ID
 					    FROM $wpdb->comments
 					    WHERE $wpdb->comments = %d",$post_id);
 					$found_product_id = $wpdb->get_var($db_query);
 					if ( ! $found_product_id ) {
-						$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', sprintf(__( '> > Skipped. Cannot find product reviews with ID %s. Importing instead.', 'wf_pr_rev_import_export'), $item['ID']) );
+						$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', sprintf(__( '> > Skipped. Cannot find product reviews with ID %s. Importing instead.', 'product-reviews-import-export-for-woocommerce'), $item['ID']) );
 						$merging = false;
 
 					} else {
 
 						$post_id = $found_product_id;
 
-						$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', sprintf(__( '> > Found product reviews with ID %s.', 'wf_pr_rev_import_export'), $post_id) );
+						$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', sprintf(__( '> > Found product reviews with ID %s.', 'product-reviews-import-export-for-woocommerce'), $post_id) );
 					}
 				}
 				$product['merging'] = true;
@@ -149,28 +150,48 @@ class WF_CSV_Parser {
 		if ( ! $merging ) {
 
 			$product['merging'] = false;
-			$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', sprintf( __('> Row %s - preparing for import.', 'wf_pr_rev_import_export'), $this->row ) );
+			$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', sprintf( __('> Row %s - preparing for import.', 'product-reviews-import-export-for-woocommerce'), $this->row ) );
 
 			// Required fields
-			if ( $item['comment_content'] === '')
+                        if ( !isset($item['comment_content']) || $item['comment_content'] === '')
 			{
-				$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', __( '> > Skipped. No comment content set for new product reviews.', 'wf_pr_rev_import_export') );
-				return new WP_Error( 'parse-error', __( 'No comment content set for new product reviews.', 'wf_pr_rev_import_export' ) );
-			}
-            if ( $item['comment_post_ID'] === '' )
-            {
-				$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', __( '> > Skipped. No post(product) id found, for which new comment is to be imported', 'wf_pr_rev_import_export') );
-                return new WP_Error( 'parse-error', __( 'No post(product) id found, for which new comment is to be imported.', 'wf_pr_rev_import_export' ) );
+				$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', __( '> > Skipped. No comment content set for new product reviews.', 'product-reviews-import-export-for-woocommerce') );
+				return new WP_Error( 'parse-error', __( 'No comment content set for new product reviews.', 'product-reviews-import-export-for-woocommerce' ) );
 			}
 
+                        if($use_sku == 1 && (!isset($item['product_SKU']) || $item['product_SKU'] === ''))
+			{
+				$WF_CSV_Product_Review_Import->hf_log_data_change( 'csv-import', __( '> > Skipped. No Product SKU given, for which new comment is to be imported', 'wf_csv_import_export') );
+			        return new WP_Error( 'parse-error', __( 'Product SKU is empty, Skipped the review.', 'product-reviews-import-export-for-woocommerce' ) );
+			}
+                        elseif ( $use_sku == 0 && (!isset($item['comment_post_ID']) || $item['comment_post_ID'] === '' )){                       
+                            $WF_CSV_Product_Review_Import->hf_log_data_change('csv-import', __('> > Skipped. No post(product) id found, for which new comment is to be imported', 'product-reviews-import-export-for-woocommerce'));
+                            return new WP_Error('parse-error', __('No post(product) id found, for which new comment is to be imported.', 'product-reviews-import-export-for-woocommerce'));
+                        }
+                  }
+                  
+                  
+		if($use_sku == 1 && $item['product_SKU'])
+		{
+			$temp_product_id = wc_get_product_id_by_sku( $item['product_SKU'] );
+			if(! $temp_product_id)
+			{
+				$WF_CSV_Product_Review_Import->hf_log_data_change( 'review-csv-import', __( '> > Skipped. No Product found for given SKU, for which new comment is to be imported', 'wf_csv_import_export') );
+				return new WP_Error( 'parse-error', __( 'No Product found for given SKU, Skipped the review.', 'wf_csv_import_export' ) );
+			}
 		}
+		
 
 		$product['post_id'] = $post_id;
 
 
 		// Get post fields
 		foreach ( $this->post_defaults as $column => $default ) {
-			if ( isset( $item[ $column ] ) ) $product[ $column ] = $item[ $column ];
+			if ( isset( $item[ $column ] ) ) 
+                            $product[ $column ] = $item[ $column ];
+                        if($column == 'comment_post_ID' && $use_sku == 1)
+				$product[ $column ] = !empty($temp_product_id) ? $temp_product_id : null;
+                        
 		}
 
 		// Get custom fields
@@ -243,6 +264,8 @@ class WF_CSV_Parser {
 
 		
 		$product['comment_content'] = ( ! empty( $item['comment_content'] ) ) ? $item['comment_content'] : '';
+                $product['comment_alter_id'] = ( ! empty( $item['comment_alter_id'] ) ) ? $item['comment_alter_id'] : '';
+
 		unset( $item, $terms_array, $postmeta, $attributes, $gpf_data, $images );
 		return $product;
 	}

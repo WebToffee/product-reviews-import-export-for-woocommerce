@@ -15,7 +15,7 @@ class WF_ProdReviewImpExpCsv_AJAX_Handler {
 	/**
 	 * Ajax event for importing a CSV
 	 */
-	public function csv_import_request() {
+	public function csv_import_request() {            
 		define( 'WP_LOAD_IMPORTERS', true );
                 WF_PrRevImpExpCsv_Importer::product_importer();
 	}

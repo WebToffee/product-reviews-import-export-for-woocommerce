@@ -1,16 +1,6 @@
-<div class="icon32" id="icon-woocommerce-importer"><br></div>
-    <h2 class="nav-tab-wrapper woo-nav-tab-wrapper">
-                <a href="<?php echo admin_url('admin.php?page=wf_pr_rev_csv_im_ex') ?>" class="nav-tab <?php echo ($tab == 'export') ? 'nav-tab-active' : ''; ?>"><?php _e('Product Reviews Export', 'product-reviews-import-export-for-woocommerce'); ?></a>
-
-        <a href="<?php echo admin_url('admin.php?import=product_reviews_csv') ?>" class="nav-tab nav-tab-active "><?php _e('Product Reviews Import', 'product-reviews-import-export-for-woocommerce'); ?></a>
-        <a href="<?php echo admin_url('admin.php?page=wf_pr_rev_csv_im_ex&tab=help'); ?>" class="nav-tab <?php echo ('help' == $tab) ? 'nav-tab-active' : ''; ?>"><?php _e('Help', 'product-reviews-import-export-for-woocommerce'); ?></a>
-        <a href="https://www.webtoffee.com/product/product-import-export-woocommerce/" target="_blank" class="nav-tab nav-tab-premium"><?php _e('Upgrade to Premium for More Features', 'product-reviews-import-export-for-woocommerce'); ?></a>
-
-    </h2><br>
 <div class="tool-box bg-white p-20p pipe-view">
- 
  <h3 class="title aw-title"><?php _e('Import Product Reviews in CSV Format:', 'product-reviews-import-export-for-woocommerce'); ?></h3>
-    <p><?php _e('You can import product reviews (in CSV format) in to the shop .', 'product-reviews-import-export-for-woocommerce'); ?></p>
+    <p><?php _e('You can import product reviews (in CSV format) in to the shop using any of below methods.', 'product-reviews-import-export-for-woocommerce'); ?></p>
 
 <?php if (!empty($upload_dir['error'])) : ?>
         <div class="error"><p><?php _e('Before you can upload your import file, you will need to fix the following error:', 'product-reviews-import-export-for-woocommerce'); ?></p>
@@ -54,4 +44,4 @@
         </form>
 <?php endif; ?>
 </div>
-<?php include(WF_ROOT_FILE_PATH . 'includes/views/market.php'); ?>
+<?php // include(WF_ROOT_FILE_PATH . 'includes/views/market.php'); ?>
